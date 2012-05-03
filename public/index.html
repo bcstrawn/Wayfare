@@ -1,37 +1,50 @@
+<!DOCTYPE html>
+<html>
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
-<script src="game.js"></script>
+<style>
+*{
+margin:0px;
+padding:0px;
+}
 
-    <style type="text/css">
-	body{
-		background-color: blue;
-	}
-	p{
-		color: blue;
-		font-size: 40px;
-	}
-	h1{
-		color: green;
-		font-size: 30px;
-	}
-	#mainCanvas{
-		border: 1px solid black;
-		background-color: white;
-	}
+canvas { image-rendering:optimizeSpeed;}
+</style>
+    <head>
+        <meta charset="utf-8">
+        <title>Wayfare v0.4</title>
+    </head>
+    <body>
+		<div id="canvasContainer" tabindex="0">
+			<canvas id="surface" width="1024" height="768" style="background: gray"></canvas>
+		</div>
 		
-	</style>
-<div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
-	<b>USERS</b>
-	<div id="users"></div>
-</div>
-<div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
-	<div id="conversation"></div>
-	<input id="data" style="width:200px;" />
-	<input type="button" id="datasend" value="send" />
-</div>
-        <div id="main" class="center">
-			<canvas id="mainCanvas" width="800" height="600">
-			Your browser does not support the canvas element.
-			</canvas>
-        </div>
-<p>test text<p>
+		<div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
+			<b>USERS</b>
+			<div id="users"></div>
+		</div>
+		<div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
+			<div id="conversation"></div>
+			<input id="data" style="width:200px;" />
+			<input type="button" id="datasend" value="send" />
+		</div>
+
+        <script type="text/javascript" src="scripts/timer.js"></script>
+        <script type="text/javascript" src="scripts/networkManager.js"></script>
+        <script type="text/javascript" src="scripts/assetManager.js"></script>
+        <script type="text/javascript" src="scripts/gameEngine.js"></script>
+        <script type="text/javascript" src="scripts/wayfare.js"></script>
+        <script type="text/javascript" src="scripts/app.js"></script>
+        <script type="text/javascript" src="scripts/animation.js"></script>	
+        <script type="text/javascript" src="scripts/entity.js"></script>	
+        <script type="text/javascript" src="scripts/terrain.js"></script>
+        <script type="text/javascript" src="scripts/explosion.js"></script>	
+        <script type="text/javascript" src="scripts/player.js"></script>	
+        <script type="text/javascript" src="scripts/GUI.js"></script>
+        <script type="text/javascript" src="scripts/GuiScreen.js"></script>
+        <script type="text/javascript" src="scripts/GuiInventory.js"></script>
+        <script type="text/javascript" src="scripts/button.js"></script>		
+        <script type="text/javascript" src="scripts/Inventory.js"></script>		
+        <!--<script type="text/javascript" src="scripts/slot.js"></script>	-->	
+    </body>
+</html>
