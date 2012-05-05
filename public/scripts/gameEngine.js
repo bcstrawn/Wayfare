@@ -5,6 +5,7 @@ function GameEngine() {
     this.click = null;
 	this.dblClick = null;
 	this.key = 0;
+	this.key2 = 0;
 	this.keyPress = 0;
     this.mouse = null;
 	this.mouseTemp = null;
@@ -78,12 +79,21 @@ GameEngine.prototype.startInput = function() {
     }, false);
 	
 	document.getElementById("canvasContainer").addEventListener("keydown", function(e) {
+		if(that.key != e.keyCode) {
+			//if a second key is pressed then set key2 to the old key
+			that.key2 = that.key;
+		}
 		that.key = e.keyCode;
     }, false);
 	
 	document.getElementById("canvasContainer").addEventListener("keyup", function(e) {
-		that.keyPress = that.key;
-		that.key = 0;
+		that.keyPress = that.key;	
+		if(that.key2) {
+			//if there was a second key pressed
+			that.key2 = 0;
+		} else {
+			that.key = 0;
+		}
     }, false);
 }
 
@@ -130,8 +140,32 @@ GameEngine.prototype.update = function() {
 	var dt = this.clockTick*1000;
 	
 	//if the 'm' key was pressed then make an evil link
-	if (this.keyPress == 77) {
-		NETWORK_MANAGER.createEnemy();
+	if (this.keyPress) {
+		if(this.keyPress == 77) {
+			NETWORK_MANAGER.createEnemy();
+		}
+	}
+	
+	if(!this.key && !this.key2) {
+		//if there are no keys pressed then stop moving
+		NETWORK_MANAGER.stopMove();	
+	}
+	
+	if(this.key) {
+		switch(this.key) {
+			case 188:
+				NETWORK_MANAGER.move(1);
+				break;
+			case 65:
+				NETWORK_MANAGER.move(4);
+				break;
+			case 69:
+				NETWORK_MANAGER.move(2);
+				break;
+			case 79:
+				NETWORK_MANAGER.move(3);
+				break;
+		}
 	}
 
     for (var i = 0; i < entitiesCount; i++) {
@@ -186,13 +220,7 @@ GameEngine.prototype.update = function() {
 	if(this.click) {
 		//if the mouse is clicked on a gui
 		if(!guiClick) {
-			//if the mouse isnt clicked on GUI then send the click to move the player
-			if(hoverEntity) {
-				NETWORK_MANAGER.attack(hoverEntity);
-			} else {
-				NETWORK_MANAGER.getClick(this.mouse.x, this.mouse.y);
-				this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
-			}
+			this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
 		}
 	}
 	

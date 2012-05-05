@@ -8,14 +8,9 @@ function NetworkManager(game, socket) {
 	this.stateBuffer = [];
 	this.stateRequests = 0;
 	this.FPS = 0;
+	this.oldDir = 0;
 	startNetwork(this, this.game, this.socket);
 	//this.init();
-}
-
-NetworkManager.prototype.getClick = function(x, y) {
-	this.click = true;
-	this.clickCoords.x = x-20;
-	this.clickCoords.y = y-54;
 }
 
 NetworkManager.prototype.key = function(keyVal) {
@@ -30,9 +25,16 @@ NetworkManager.prototype.update = function() {
 	}
 }
 
-NetworkManager.prototype.attack = function(entity) {
-	console.log("send packet to attack: " + entity.username);
-	this.socket.emit('attack', entity.username);
+NetworkManager.prototype.move = function(dir) {
+	if(this.oldDir == dir) return;
+	
+	this.oldDir = dir;
+	this.socket.emit('move', dir);
+}
+
+NetworkManager.prototype.stopMove = function() {
+	this.socket.emit('stopMove');
+	this.oldDir = 0;
 }
 
 NetworkManager.prototype.createEnemy = function() {

@@ -35,20 +35,24 @@ io.sockets.on('connection', function (socket) {
 		io.sockets.emit('updatechat', socket.username, data);
 	});
 
-	//when the user updates their coords
-	socket.on('click', function(x, y){
+	socket.on('move', function (dir) {
 		var id = getUser(socket.username);
 		if(id) {
 			var player = playerList[id];
-			player.click = true;
-			player.clickX = x;
-			player.clickY = y;
-			player.attack = null;
+			player.move = dir;
+		}
+	});
+	
+	socket.on('stopMove', function () {
+		var id = getUser(socket.username);
+		if(id) {
+			var player = playerList[id];
+			player.move = 0;
 		}
 	});
 
 	// when the client emits 'adduser', this listens and executes
-	socket.on('adduser', function(username){
+	socket.on('adduser', function(username) {
 		// we store the username in the socket session for this client
 		socket.username = username;
 		// add the client's username to the global list
@@ -88,14 +92,6 @@ io.sockets.on('connection', function (socket) {
 		//io.sockets.emit('createplayer', username);
 	});	
 	
-	socket.on('attack', function(username) {
-		//if the the attack command is not attacking themself
-		if(socket.username != username) {
-			var player = getUser(socket.username);
-			playerList[player].attack = playerList[getUser(username)];
-		}
-	});	
-	
 	/*****************************************************JOHN***********************************************************
 	socket.on('dblclick', function(x, y){
 		var id = getUser(socket.username);
@@ -121,20 +117,6 @@ function getUser(username) {
 function roundNumber(num, dec) {
 	var result = Math.round(num*Math.pow(10,dec))/Math.pow(10,dec);
 	return result;
-}
-
-function lineDistance(playerDist)
-{
-	var xs = 0;
-	var ys = 0;
-					 
-	xs = playerDist.clickX - playerDist.x;
-	xs = xs * xs;
-					 
-	ys = playerDist.clickY - playerDist.y;
-	ys = ys * ys;
-
-	return Math.sqrt( xs + ys );
 }
 
 function getWholePacket() {
@@ -187,38 +169,17 @@ function Entity(username, speed, hp, x, y) {
 		this.health = hp;
 		this.x = x;
 		this.y = y;
-		this.click = false;
-		this.clickX = this.x;
-		this.clickY = this.y;
-		this.attack = null;
 		this.timeToAttack = 0;
 		this.h = 66;
 		this.w = 60;
 		this.damage = 0;
+		this.move = 0;
 }
 
 Entity.prototype.update = function(dt) {
 	var playerObject = new Object();
 	playerObject.username = this.username;
 	var toAdd = false; //If variables have been changed, add state to outgoing packet
-	
-	if(this.attack) {
-		this.timeToAttack += dt;
-		if(this.attack.y - this.y - this.h < 0 && this.attack.y + this.attack.h - this.y > 0 &&
-		   this.attack.x - this.x - this.w < 0 && this.attack.x + this.attack.w - this.x > 0) {
-		//if the attack target and this have collided then stop moving and attack
-			this.clickX = this.x;
-			this.clickY = this.y;
-			
-			if(this.timeToAttack > 1000) {
-				this.attack.damage = -2;
-				this.timeToAttack = 0;
-			}
-		} else {		
-			this.clickX = this.attack.x;
-			this.clickY = this.attack.y;
-		}
-	}
 	
 	if(this.damage) {
 		toAdd = true;
@@ -236,35 +197,27 @@ Entity.prototype.update = function(dt) {
 		}		
 	}
 	
-	//if the character needs to move
-	if ((this.clickY != this.y) || (this.clickX != this.x)) {
+	if(this.move) {
 		toAdd = true;
-		var distance = lineDistance(this);
-		var thisMovePercent = this.speed/ distance;
-
-		var xMove = (this.clickX - this.x) * thisMovePercent;
-		var yMove = (this.clickY - this.y) * thisMovePercent;
-
-		var ySign = (this.clickY > this.y) ? 1 : -1;
-		var xSign = (this.clickX > this.x) ? 1 : -1;
-
-		if((this.y + yMove - this.clickY)*ySign > 0) {
-			yMove = this.clickY - this.y;
+		
+		switch(this.move) {
+			case 1:
+				this.y += -this.speed;
+				playerObject.y = -this.speed;				
+				break;
+			case 2:
+				this.x += this.speed;
+				playerObject.x = this.speed;
+				break;
+			case 3:
+				this.y += this.speed;
+				playerObject.y = this.speed;
+				break;
+			case 4:
+				this.x += -this.speed;
+				playerObject.x = -this.speed;
+				break;
 		}
-
-		if((this.x + xMove - this.clickX)*xSign > 0) {
-			xMove = this.clickX - this.x;
-		}
-		//round it to the nearest 3 to compact the data, unless its too small
-		if(Math.abs(xMove) > 0.01)
-			xMove = roundNumber(xMove, 3);
-		if(Math.abs(yMove) > 0.01)
-			yMove = roundNumber(yMove, 3);
-
-		this.y += yMove;
-		this.x += xMove;
-		playerObject.y = yMove;
-		playerObject.x = xMove;
 	}
 
 
@@ -288,8 +241,6 @@ Player.prototype.update = function(dt) {
 //************************************************ ENEMY *************************************************************
 function Enemy(username, speed, hp, x, y) {
     Entity.call(this, username, speed, hp, x, y);
-	this.clickX = this.x + Math.floor((Math.random()*300)-150);
-	this.clickY = this.y + Math.floor((Math.random()*300)-150);
 }
 
 Enemy.prototype = new Entity();
@@ -297,10 +248,4 @@ Enemy.prototype.constructor = Enemy;
 
 Enemy.prototype.update = function(dt) {
 	Entity.prototype.update.call(this, dt);
-	/*
-	if(this.clickX == this.x && this.clickY == this.y) {
-		this.clickX = this.x + Math.floor((Math.random()*300)-150);
-		this.clickY = this.y + Math.floor((Math.random()*300)-150);
-	}
-	*/
 }
