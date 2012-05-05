@@ -43,6 +43,7 @@ io.sockets.on('connection', function (socket) {
 			player.click = true;
 			player.clickX = x;
 			player.clickY = y;
+			player.attack = null;
 		}
 	});
 
@@ -51,7 +52,7 @@ io.sockets.on('connection', function (socket) {
 		// we store the username in the socket session for this client
 		socket.username = username;
 		// add the client's username to the global list
-		var newPlayer = new Entity(username, 5, 10, 100, 100);
+		var newPlayer = new Player(username, 5, 10, 100, 100);
 		playerList.push(newPlayer);
 		// echo to client they've connected
 		socket.emit('updatechat', 'SERVER', 'you have connected');
@@ -77,6 +78,23 @@ io.sockets.on('connection', function (socket) {
 		// echo globally that this client has left
 		socket.broadcast.emit('updatechat', 'SERVER', socket.username + ' has disconnected');
 	});
+
+	socket.on('addEnemy', function(enemyName){		
+		var newEnemy = new Enemy(enemyName+enemyNum++, 5, 10, 500, 300);
+		playerList.push(newEnemy);
+		// echo globally (all clients) that a person has connected
+		// update the list of users in chat, client-side
+		io.sockets.emit('addPlayer', playerList[playerList.length-1]);
+		//io.sockets.emit('createplayer', username);
+	});	
+	
+	socket.on('attack', function(username) {
+		//if the the attack command is not attacking themself
+		if(socket.username != username) {
+			var player = getUser(socket.username);
+			playerList[player].attack = playerList[getUser(username)];
+		}
+	});	
 	
 	/*****************************************************JOHN***********************************************************
 	socket.on('dblclick', function(x, y){
@@ -87,16 +105,6 @@ io.sockets.on('connection', function (socket) {
 			player.attackX = x;
 			player.attackY = y;
 		}
-	});	
-	*/
-
-	socket.on('addEnemy', function(enemyName){		
-		var newEnemy = new Enemy(enemyName+enemyNum++, 5, 100, 500, 300);
-		playerList.push(newEnemy);
-		// echo globally (all clients) that a person has connected
-		// update the list of users in chat, client-side
-		io.sockets.emit('addPlayer', playerList[playerList.length-1]);
-		//io.sockets.emit('createplayer', username);
 	});	
 	//*******************************************************************************************************************/
 });
@@ -129,6 +137,19 @@ function lineDistance(playerDist)
 	return Math.sqrt( xs + ys );
 }
 
+function getWholePacket() {
+	var wholePacket = [];
+	for(var i = 0; i < playerList.length; i++) {
+		var player = playerList[i];
+		var playerToAdd = {x: player.x,
+						   y: player.y,
+						   username: player.username,
+						   health: player.health};
+		wholePacket.push(playerToAdd);
+	}
+	return wholePacket;
+}
+
 var timeOfLastUpdate = new Date().valueOf();
 
 function tick() {
@@ -138,12 +159,13 @@ function tick() {
 	if(tickTime >= 50) {
 		for(var i in playerList) {
 			var player = playerList[i];
-			player.update();
+			player.update(tickTime);
 		}
 		
 		if(packetNum%40 == 0) {
 		//Every 40 packets send a whole state instead of a delta states
-			io.sockets.emit('wholePacket', packetNum++, playerList);
+			var wholePacket = getWholePacket();
+			io.sockets.emit('wholePacket', packetNum++, wholePacket);
 		}
 		else {
 			//set states (send delta changes)
@@ -168,17 +190,54 @@ function Entity(username, speed, hp, x, y) {
 		this.click = false;
 		this.clickX = this.x;
 		this.clickY = this.y;
-		this.attack = false;
+		this.attack = null;
+		this.timeToAttack = 0;
+		this.h = 66;
+		this.w = 60;
+		this.damage = 0;
 }
 
-Entity.prototype.update = function() {
+Entity.prototype.update = function(dt) {
 	var playerObject = new Object();
 	playerObject.username = this.username;
 	var toAdd = false; //If variables have been changed, add state to outgoing packet
 	
+	if(this.attack) {
+		this.timeToAttack += dt;
+		if(this.attack.y - this.y - this.h < 0 && this.attack.y + this.attack.h - this.y > 0 &&
+		   this.attack.x - this.x - this.w < 0 && this.attack.x + this.attack.w - this.x > 0) {
+		//if the attack target and this have collided then stop moving and attack
+			this.clickX = this.x;
+			this.clickY = this.y;
+			
+			if(this.timeToAttack > 1000) {
+				this.attack.damage = -2;
+				this.timeToAttack = 0;
+			}
+		} else {		
+			this.clickX = this.attack.x;
+			this.clickY = this.attack.y;
+		}
+	}
+	
+	if(this.damage) {
+		toAdd = true;
+		this.health += this.damage;
+		playerObject.health = this.damage;
+		this.damage = 0;
+		console.log("health: " + this.health);
+		if(this.health <= 0) {
+			var index = getUser(this.username);
+			io.sockets.emit('deletePlayer', playerList[index].username);
+			if(index) {
+				playerList.splice(index, 1);
+			}
+			return;
+		}		
+	}
+	
 	//if the character needs to move
-	if ((this.clickY != this.y) || (this.clickX != this.x))
-	{
+	if ((this.clickY != this.y) || (this.clickX != this.x)) {
 		toAdd = true;
 		var distance = lineDistance(this);
 		var thisMovePercent = this.speed/ distance;
@@ -208,6 +267,7 @@ Entity.prototype.update = function() {
 		playerObject.x = xMove;
 	}
 
+
 	if(toAdd) { //New information being sent in packet
 		newState.push(playerObject);
 	}
@@ -221,7 +281,8 @@ function Player(username, speed, hp, x, y) {
 Player.prototype = new Entity();
 Player.prototype.constructor = Player;
 
-Player.prototype.update = function() {
+Player.prototype.update = function(dt) {
+	Entity.prototype.update.call(this, dt);
 }
 
 //************************************************ ENEMY *************************************************************
@@ -234,8 +295,8 @@ function Enemy(username, speed, hp, x, y) {
 Enemy.prototype = new Entity();
 Enemy.prototype.constructor = Enemy;
 
-Enemy.prototype.update = function() {
-	Entity.prototype.update.call(this);
+Enemy.prototype.update = function(dt) {
+	Entity.prototype.update.call(this, dt);
 	/*
 	if(this.clickX == this.x && this.clickY == this.y) {
 		this.clickX = this.x + Math.floor((Math.random()*300)-150);

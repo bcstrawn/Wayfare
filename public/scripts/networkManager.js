@@ -30,6 +30,11 @@ NetworkManager.prototype.update = function() {
 	}
 }
 
+NetworkManager.prototype.attack = function(entity) {
+	console.log("send packet to attack: " + entity.username);
+	this.socket.emit('attack', entity.username);
+}
+
 NetworkManager.prototype.createEnemy = function() {
 	this.socket.emit('addEnemy', 'evilLink');
 }
@@ -52,6 +57,10 @@ NetworkManager.prototype.getNewState = function() {
 				//also if the difference is less than 0.01 then just set it to zero
 					update.x = (Math.abs(update.x - entity.x) > 0.01) ? update.x - entity.x : 0;
 					update.y = (Math.abs(update.y - entity.y) > 0.01) ? update.y - entity.y : 0;
+					update.health = update.health - entity.health;
+				} else {
+					var name = (update.username.substr(0, 8) == 'evilLink') ? 'linkEvil' : 'linkGreen';
+					game.addEntity(new Player(game, update.x, update.y, update.username, name, update.health));
 				}
 			}
 		}
@@ -113,9 +122,9 @@ function startNetwork(manager, game, socket) {
 	});
 
 
-	socket.on('deletePlayer', function(player) {
-		console.log("packet- deletePlayer: " + player.username);
-		var playerTemp = game.getEntityByName(player.username);
+	socket.on('deletePlayer', function(username) {
+		console.log("packet- deletePlayer: " + username);
+		var playerTemp = game.getEntityByName(username);
 		if(playerTemp) {
 			playerTemp.removeFromWorld = true;
 		}

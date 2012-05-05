@@ -125,7 +125,9 @@ GameEngine.prototype.update = function() {
     var entitiesCount = this.entities.length;
     //var selectedEntities = [];
     var selectedEntity;
+	var hoverEntity = null;
 	var guiClick = false;
+	var dt = this.clockTick*1000;
 	
 	//if the 'm' key was pressed then make an evil link
 	if (this.keyPress == 77) {
@@ -136,8 +138,11 @@ GameEngine.prototype.update = function() {
         var entity = this.entities[i];
         
         if (!entity.removeFromWorld) {
-            entity.update();
+            entity.update(dt);
         }
+		if(this.mouse && entity.username && entity.isInsideEntity(this.mouse.x, this.mouse.y)) {
+			hoverEntity = entity;
+		}
     }
     
     for (var i = this.entities.length-1; i >= 0; --i) {
@@ -182,8 +187,12 @@ GameEngine.prototype.update = function() {
 		//if the mouse is clicked on a gui
 		if(!guiClick) {
 			//if the mouse isnt clicked on GUI then send the click to move the player
-			NETWORK_MANAGER.getClick(this.mouse.x, this.mouse.y);
-			this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
+			if(hoverEntity) {
+				NETWORK_MANAGER.attack(hoverEntity);
+			} else {
+				NETWORK_MANAGER.getClick(this.mouse.x, this.mouse.y);
+				this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
+			}
 		}
 	}
 	
@@ -195,7 +204,7 @@ GameEngine.prototype.update = function() {
 			return;
 		}
 	}
-	var dt = this.clockTick*1000;
+
 	while(dt > 0) {
 		if(dt < this.newState.time) {
 			this.useState(dt);
@@ -248,6 +257,13 @@ GameEngine.prototype.useState = function(dt) {
 		else
 			entity.moving = false;
 			
+		if(update.health) {
+			entity.health += update.health;
+			console.log("health update(" + update.health + ") : " + entity.health + " / " + entity.maxHealth);
+			update.health = 0;
+		}
+			
+		entity.timeSinceUpdate = 0;
 		entity.setXandY(entity.x + xToMove, entity.y + yToMove);
 	}
 }

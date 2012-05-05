@@ -7,12 +7,17 @@ function Player(game, x, y, name, sprite, hp) {
 	this.stopMoving = true;
 	this.h = 66;
 	this.w = 60;
+	this.timeSinceUpdate = 0;
 }
 Player.prototype = new Entity();
 Player.prototype.constructor = Player;
 
-Player.prototype.update = function() {
+Player.prototype.update = function(dt) {
+	this.timeSinceUpdate += dt;
 	this.moving = false;
+	if(this.timeSinceUpdate > 3000) {
+		this.removeFromWorld = true;
+	}
 }
 
 Player.prototype.setDirection = function(_dir) {
@@ -48,4 +53,11 @@ Player.prototype.draw = function(ctx) {
 	ctx.fillText(this.username, this.x+15, this.y);
 	ctx.fillStyle = "#FF0000";
 	ctx.fillRect(this.x+5, this.y-20, (this.health/this.maxHealth)*50, 7);
+}
+
+Player.prototype.isInsideEntity = function(x, y) {
+	if(x >= this.x && x <= (this.x + this.w) && y >= this.y && y <= (this.y + this.h)) {
+		return true;
+	}
+	return false;
 }
