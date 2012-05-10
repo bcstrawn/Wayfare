@@ -8,6 +8,8 @@ function Entity(game, x, y, hp) {
 	this.selected = false;
 	this.moving = false;
 	this.attack = false;
+	this.attackFrame = 0;
+	this.z = 0;
 }
 
 Entity.prototype.setXandY = function(x, y) {

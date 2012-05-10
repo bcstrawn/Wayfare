@@ -36,7 +36,7 @@ GuiInventory.prototype.update = function () {
 		if(this.isMouseInsideGUI(slot.x+this.x, slot.y+this.y, this.slotOutline)) {
 			slot.hover = true;
 			if(this.clicked) {
-				slot.sprite = ASSET_MANAGER.getAsset('img/sword.png');
+				slot.sprite = ASSET_MANAGER.getAsset('img/morningstar.png');
 			}
 			if(this.mouseDown && slot.sprite) {
 				this.slotDragged = new Slot(slot.x+this.x, slot.y+this.y);

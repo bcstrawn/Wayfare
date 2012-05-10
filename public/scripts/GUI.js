@@ -3,11 +3,12 @@ function GUI(game, x, y, sprite) {
     this.x = x;
     this.y = y;
 	this.sprite = ASSET_MANAGER.getAsset(sprite);
-    this.removeFromWorld = false;
+    this.toRemove = false;
 	this.hover = false;
 	this.clicked = false;
 	this.mouseDown = false;
 	this.mouseUp = false;
+	this.z = 0;
 }
 
 
@@ -18,9 +19,11 @@ GUI.prototype.setXandY = function(x, y) {
 
 GUI.prototype.draw = function(ctx) {
     ctx.drawImage(this.sprite, this.x, this.y);
+	/*
 	if(this.hover) {
 		ctx.strokeRect(this.x, this.y, this.sprite.width, this.sprite.height);
 	}
+	*/
 }
 
 GUI.prototype.isMouseInsideGUI = function(x, y, sprite) {
@@ -44,4 +47,7 @@ GUI.prototype.update = function () {
 }
 
 GUI.prototype.mouseDragged = function (x, y) {
+}
+
+GUI.prototype.remove = function() {
 }

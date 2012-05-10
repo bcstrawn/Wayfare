@@ -11,6 +11,7 @@ Wayfare.prototype.start = function() {
 	}
 	this.inventory = new Inventory(this);
 	this.addGUI(new GuiInventory(this, this.ctx.canvas.width-382, this.ctx.canvas.height-420, 'img/inventory.png', this.inventory.mainInventory));
+	this.addGUI(new GuiScreenOptions(this, 150, 100, 'img/options.png'));
 	
     GameEngine.prototype.start.call(this);
 }

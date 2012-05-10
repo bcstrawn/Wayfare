@@ -39,18 +39,28 @@ io.sockets.on('connection', function (socket) {
 		var id = getUser(socket.username);
 		if(id) {
 			var player = playerList[id];
-			player.move = dir;
+			player.move[dir] = true;
 		}
 	});
 	
-	socket.on('stopMove', function () {
+	socket.on('stop', function (dir) {
 		var id = getUser(socket.username);
 		if(id) {
 			var player = playerList[id];
-			player.move = 0;
+			player.move[dir] = false;
 		}
 	});
 
+	socket.on('attack', function() {
+		var id = getUser(socket.username);
+		if(id) {
+			var player = playerList[id];
+			if(player.attackTimer <= 0) {
+				player.attack = true;
+			}
+		}	
+	});
+	
 	// when the client emits 'adduser', this listens and executes
 	socket.on('adduser', function(username) {
 		// we store the username in the socket session for this client
@@ -90,7 +100,7 @@ io.sockets.on('connection', function (socket) {
 		// update the list of users in chat, client-side
 		io.sockets.emit('addPlayer', playerList[playerList.length-1]);
 		//io.sockets.emit('createplayer', username);
-	});	
+	});
 	
 	/*****************************************************JOHN***********************************************************
 	socket.on('dblclick', function(x, y){
@@ -173,7 +183,10 @@ function Entity(username, speed, hp, x, y) {
 		this.h = 66;
 		this.w = 60;
 		this.damage = 0;
-		this.move = 0;
+		this.move = [];
+		this.attack = false;
+		this.attackTimer = 0;
+		this.dir = 3;
 }
 
 Entity.prototype.update = function(dt) {
@@ -197,29 +210,86 @@ Entity.prototype.update = function(dt) {
 		}		
 	}
 	
-	if(this.move) {
+	//movement stuff
+	var xMove = 0;
+	var yMove = 0;
+	if(this.move[1]) {
+		this.y += -this.speed;
+		yMove += -this.speed;
+		this.dir = 1;
+	}
+	if(this.move[2]) {
+		this.x += this.speed;
+		xMove += this.speed;
+		this.dir = 2;
+	}
+	if(this.move[3]) {
+		this.y += this.speed;
+		yMove += this.speed;
+		this.dir = 3;
+	}
+	if(this.move[4]) {
+		this.x += -this.speed;
+		xMove += -this.speed;
+		this.dir = 4;
+	}
+	if(xMove != 0) {
+		playerObject.x = xMove;
 		toAdd = true;
-		
-		switch(this.move) {
-			case 1:
-				this.y += -this.speed;
-				playerObject.y = -this.speed;				
-				break;
-			case 2:
-				this.x += this.speed;
-				playerObject.x = this.speed;
-				break;
-			case 3:
-				this.y += this.speed;
-				playerObject.y = this.speed;
-				break;
-			case 4:
-				this.x += -this.speed;
-				playerObject.x = -this.speed;
-				break;
-		}
+	}
+	if(yMove != 0) {
+		playerObject.y = yMove;
+		toAdd = true;
 	}
 
+	if(this.attackTimer > 0) {
+		this.attackTimer -= dt;
+	}
+	
+	if(this.attack) {
+		toAdd = true;
+		
+		for(var i = 0; i < playerList.length; i++) {
+			var enemy = playerList[i];
+			var midY = this.y + this.h/2.0;
+			var midX = this.x + this.w/2.0;
+			//check if they are within range of the attack
+			switch(this.dir) {
+				case 1:
+					//north
+					if(enemy.x > (midX - this.w) && enemy.x < midX &&
+					enemy.y > (this.y - this.w - 10) && enemy.y < this.y) {
+						enemy.damage = -2;
+					}
+					break;
+				case 2:
+					//east
+					if(enemy.x > this.x && enemy.x < (this.x + this.w + 10) &&
+					enemy.y > (midY - this.h) && enemy.y < midY) {
+						enemy.damage = -2;
+					}
+					break;
+				case 3:
+					//south
+					if(enemy.x > (midX - this.w) && enemy.x < midX &&
+					enemy.y > this.y && enemy.y < (this.y + this.h + 10)) {
+						enemy.damage = -2;
+					}
+					break;
+				case 4:
+					//west
+					if(enemy.x > (this.x - this.w - 10) && enemy.x < this.x &&
+					enemy.y > (midY - this.h) && enemy.y < midY) {
+						enemy.damage = -2;
+					}
+					break;
+			}
+		}
+		
+		playerObject.attack = true;
+		this.attack = false;
+		this.attackTimer = 1000;
+	}
 
 	if(toAdd) { //New information being sent in packet
 		newState.push(playerObject);

@@ -28,6 +28,10 @@ ASSET_MANAGER.queueDownload('img/slotOutline.png');
 ASSET_MANAGER.queueDownload('img/linkEvil.png');
 ASSET_MANAGER.queueDownload('img/linkGreen.png');
 ASSET_MANAGER.queueDownload('img/sword.png');
+ASSET_MANAGER.queueDownload('img/morningstar.png');
+ASSET_MANAGER.queueDownload('img/options.png');
+ASSET_MANAGER.queueDownload('img/buttonClose.png');
+ASSET_MANAGER.queueDownload('img/buttonCloseHover.png');
 
 
 

@@ -1,21 +1,21 @@
 function NetworkManager(game, socket) {
+	this.moveDir = [];
 	this.game = game;
 	this.socket = socket;
 	this.click = false;
 	this.clickCoords = new Object();
-	this.key = false;
-	this.keyValue = 0;
 	this.stateBuffer = [];
-	this.stateRequests = 0;
-	this.FPS = 0;
-	this.oldDir = 0;
 	startNetwork(this, this.game, this.socket);
 	//this.init();
 }
 
-NetworkManager.prototype.key = function(keyVal) {
-	this.keyValue = keyVal;
-	this.key = true;
+NetworkManager.prototype.getDir = function(keyVal) {
+	for(var i = 0; i < this.moveDir.length; i++) {
+		if(this.moveDir[i] == keyVal) {
+			return i;
+		}
+	}
+	return -1;
 }
 
 NetworkManager.prototype.update = function() {
@@ -25,16 +25,25 @@ NetworkManager.prototype.update = function() {
 	}
 }
 
-NetworkManager.prototype.move = function(dir) {
-	if(this.oldDir == dir) return;
-	
-	this.oldDir = dir;
-	this.socket.emit('move', dir);
+NetworkManager.prototype.attack = function() {
+	this.socket.emit('attack');
 }
 
-NetworkManager.prototype.stopMove = function() {
-	this.socket.emit('stopMove');
-	this.oldDir = 0;
+NetworkManager.prototype.move = function(dir) {
+	if(this.getDir(dir) == -1) {
+	//if the dir is not already in the array then send the command to move
+		this.moveDir.push(dir);
+		this.socket.emit('move', dir);
+	}
+}
+
+NetworkManager.prototype.stop = function(dir) {
+	this.socket.emit('stop', dir);
+	var index = this.getDir(dir);
+	if(index > -1) {
+	//if the dir is in the array then remove it
+		this.moveDir.splice(index, 1);
+	}
 }
 
 NetworkManager.prototype.createEnemy = function() {
@@ -82,6 +91,7 @@ function startNetwork(manager, game, socket) {
 	socket.on('connect', function(){
 		// call the server-side function 'adduser' and send one parameter (value of prompt)
 		myName = prompt("What's your name?");
+		game.username = myName;
 		socket.emit('adduser', myName);
 	});
 

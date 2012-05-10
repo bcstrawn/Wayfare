@@ -4,9 +4,8 @@ function GameEngine() {
     this.ctx = null;
     this.click = null;
 	this.dblClick = null;
-	this.key = 0;
-	this.key2 = 0;
-	this.keyPress = 0;
+	this.key = [];
+	this.keyPress = [];
     this.mouse = null;
 	this.mouseTemp = null;
 	this.mouseDownEvent = false;
@@ -17,6 +16,8 @@ function GameEngine() {
     this.surfaceHeight = null;
 	this.newState = null;
 	this.inventory;
+	this.username = 'temp';
+	this.hotkeys = [];
 }
 
 GameEngine.prototype.init = function(ctx) {
@@ -79,21 +80,19 @@ GameEngine.prototype.startInput = function() {
     }, false);
 	
 	document.getElementById("canvasContainer").addEventListener("keydown", function(e) {
-		if(that.key != e.keyCode) {
-			//if a second key is pressed then set key2 to the old key
-			that.key2 = that.key;
+		if(that.getKey(e.keyCode) == -1) {
+		//if the key is NOT already in the list then add it
+			that.key.push(e.keyCode);
 		}
-		that.key = e.keyCode;
     }, false);
 	
 	document.getElementById("canvasContainer").addEventListener("keyup", function(e) {
-		that.keyPress = that.key;	
-		if(that.key2) {
-			//if there was a second key pressed
-			that.key2 = 0;
-		} else {
-			that.key = 0;
+		var index = that.getKey(e.keyCode);
+		if(index >= 0) {
+		//if the key is in the list then remove it
+			that.key.splice(index, 1);
 		}
+		that.keyPress.push(e.keyCode);
     }, false);
 }
 
@@ -110,21 +109,54 @@ GameEngine.prototype.getEntityByName = function(name) {
 	return 0;
 }
 
+GameEngine.prototype.getKey = function(keyCode) {
+	for(var i = 0; i < this.key.length; i++) {
+		if(this.key[i] == keyCode) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+GameEngine.prototype.getKeyPress = function(keyCode) {
+	for(var i = 0; i < this.keyPress.length; i++) {
+		if(this.keyPress[i] == keyCode) {
+			return i;
+		}
+	}
+	return -1;
+}
+
 GameEngine.prototype.addGUI = function(element) {
     this.GUI.push(element);
+	return this.GUI[this.GUI.length-1];
+}
+
+GameEngine.prototype.removeGUI = function(element) {
+    for(var i = 0; i < this.GUI.length; i++) {
+		if(this.GUI[i] == element) {
+			this.GUI.splice(i, 1);
+		}
+	}
 }
 
 GameEngine.prototype.draw = function(callback) {
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.save();
 	
-	//console.log("drawing");
-    for (var i = 0; i < this.entities.length; i++) {
-        this.entities[i].draw(this.ctx);
-    }
-    for (var i = 0; i < this.GUI.length; i++) {
-        this.GUI[i].draw(this.ctx);
-    }
+	for(var z = 0; z < 3; z++) {
+	//Go through the lists 3 times and only draw them if they have the z index
+		for (var i = 0; i < this.entities.length; i++) {
+			if(this.entities[i].z == z) {
+				this.entities[i].draw(this.ctx);
+			}
+		}
+		for (var i = 0; i < this.GUI.length; i++) {
+			if(this.GUI[i].z == z) {
+				this.GUI[i].draw(this.ctx);
+			}
+		}
+	}
     if (callback) {
         callback(this);
     }
@@ -139,20 +171,31 @@ GameEngine.prototype.update = function() {
 	var guiClick = false;
 	var dt = this.clockTick*1000;
 	
-	//if the 'm' key was pressed then make an evil link
-	if (this.keyPress) {
-		if(this.keyPress == 77) {
-			NETWORK_MANAGER.createEnemy();
+	//if a key has been released
+	for(var i = 0; i < this.keyPress.length; i++) {
+		switch(this.keyPress[i]) {
+			case 188:
+				NETWORK_MANAGER.stop(1);
+				break;
+			case 65:
+				NETWORK_MANAGER.stop(4);
+				break;
+			case 69:
+				NETWORK_MANAGER.stop(2);
+				break;
+			case 79:
+				NETWORK_MANAGER.stop(3);
+				break;
+			case 77:
+				NETWORK_MANAGER.createEnemy();
+				break;
 		}
 	}
 	
-	if(!this.key && !this.key2) {
-		//if there are no keys pressed then stop moving
-		NETWORK_MANAGER.stopMove();	
-	}
-	
-	if(this.key) {
-		switch(this.key) {
+	//if there are keys being pressed
+	for(var i = 0; i < this.key.length; i++) {
+	//for each key in the list
+		switch(this.key[i]) {
 			case 188:
 				NETWORK_MANAGER.move(1);
 				break;
@@ -168,10 +211,12 @@ GameEngine.prototype.update = function() {
 		}
 	}
 
-    for (var i = 0; i < entitiesCount; i++) {
+
+    for(var i = 0; i < entitiesCount; i++) {
+	//for each entity update it and (if its a player) check if the mouse is over it
         var entity = this.entities[i];
         
-        if (!entity.removeFromWorld) {
+        if(!entity.removeFromWorld) {
             entity.update(dt);
         }
 		if(this.mouse && entity.username && entity.isInsideEntity(this.mouse.x, this.mouse.y)) {
@@ -179,19 +224,28 @@ GameEngine.prototype.update = function() {
 		}
     }
     
-    for (var i = this.entities.length-1; i >= 0; --i) {
-        if (this.entities[i].removeFromWorld) {
+    for(var i = this.entities.length-1; i >= 0; --i) {
+        if(this.entities[i].removeFromWorld) {
             this.entities.splice(i, 1);
         }
     }
+
+	//delete any screens that need to be removed
+    for(var i = this.GUI.length-1; i >= 0; --i) {
+		var _GUI = this.GUI[i];
+        if(_GUI && _GUI.toRemove) {
+			_GUI.remove();
+			this.removeGUI(_GUI);
+        }
+    }
 	
-    for (var i = 0; i < this.GUI.length; i++) {
+    for(var i = 0; i < this.GUI.length; i++) {
 		var _GUI = this.GUI[i];
 		if(this.mouseUpEvent) {
 			_GUI.mouseUp = true;
-			console.log("mouse up");
 		}		
 		if(_GUI.isMouseInsideGUI()) {
+			_GUI.hover = true;
 			if(this.mouseDownEvent) {
 				_GUI.mouseDown = true;
 			}
@@ -199,15 +253,18 @@ GameEngine.prototype.update = function() {
 				_GUI.clicked = true;
 				guiClick = true;
 			}
+		} else {
+			_GUI.hover = false;
 		}
 		if(_GUI.slotDragged) {
+		//dont click on the world if an item is being dragged
 			guiClick = true;
 		}
         _GUI.update();
     }
 	
 	//if the mouse has moved while pressing down
-	if (this.mouse && this.mouseDown && (this.mouse.x != this.mouseTemp.x || this.mouse.y != this.mouseTemp.y)) {
+	if(this.mouse && this.mouseDown && (this.mouse.x != this.mouseTemp.x || this.mouse.y != this.mouseTemp.y)) {
 		var xMove = this.mouseTemp.x - this.mouse.x;
 		var yMove = this.mouseTemp.y - this.mouse.y;
 		for (var i = 0; i < this.GUI.length; i++) {
@@ -218,9 +275,13 @@ GameEngine.prototype.update = function() {
 
 	//when the user has clicked in the game
 	if(this.click) {
-		//if the mouse is clicked on a gui
+		//if the mouse is not clicked on a gui
 		if(!guiClick) {
 			this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
+			if(hoverEntity && hoverEntity.username != this.username) {
+			//if an entity is clicked and its not our player then attack
+				NETWORK_MANAGER.attack();
+			}
 		}
 	}
 	
@@ -290,6 +351,10 @@ GameEngine.prototype.useState = function(dt) {
 			console.log("health update(" + update.health + ") : " + entity.health + " / " + entity.maxHealth);
 			update.health = 0;
 		}
+		
+		if(update.attack) {
+			entity.attack = true;
+		}
 			
 		entity.timeSinceUpdate = 0;
 		entity.setXandY(entity.x + xToMove, entity.y + yToMove);
@@ -304,6 +369,6 @@ GameEngine.prototype.loop = function() {
 	this.dblClick = false;
 	this.mouseDownEvent = false;
 	this.mouseUpEvent = false;
-	this.keyPress = 0;
+	this.keyPress = [];
 	NETWORK_MANAGER.update();
 }

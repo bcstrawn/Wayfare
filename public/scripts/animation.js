@@ -1,4 +1,4 @@
-function Animation(spriteSheet, frameWidth, frameHeight, frameDuration, offsetX, offsetY, loop) {
+function Animation(spriteSheet, frameWidth, frameHeight, frameDuration, offsetX, offsetY, loop, length) {
     this.spriteSheet = spriteSheet;
     this.frameWidth = frameWidth;
     this.frameHeight= frameHeight;
@@ -6,8 +6,12 @@ function Animation(spriteSheet, frameWidth, frameHeight, frameDuration, offsetX,
 	this.offsetX = offsetX || 0;
 	this.offsetY = offsetY || 0;
     this.loop = loop;
-	
-    this.totalTime = ((this.spriteSheet.width-this.offsetX) / this.frameWidth) * this.frameDuration;
+	this.length = length;
+	if(this.length) {
+		this.totalTime = this.length * this.frameDuration;
+	} else {
+		this.totalTime = ((this.spriteSheet.width-this.offsetX) / this.frameWidth) * this.frameDuration;
+	}
     this.elapsedTime = 0;
 }
 
@@ -27,8 +31,7 @@ Animation.prototype.drawFrame = function(tick, ctx, x, y, center) {
                   index*this.frameWidth+this.offsetX, this.offsetY*this.frameHeight,  // source from sheet
                   this.frameWidth, this.frameHeight,
                   locX, locY,
-                  this.frameWidth,
-                  this.frameHeight);
+                  this.frameWidth, this.frameHeight);
 }
 
 Animation.prototype.currentFrame = function() {
