@@ -42,6 +42,8 @@ Player.prototype.setDirection = function(_dir) {
 }
 
 Player.prototype.draw = function(ctx) {
+	var x = Math.round(this.x);
+	var y = Math.round(this.y);
 	//var _sprite = ASSET_MANAGER.getAsset('img/linkNorth.png');
 	if(!this.moving) {
 		this.animation = null;
@@ -56,14 +58,14 @@ Player.prototype.draw = function(ctx) {
 		ctx.drawImage(this.sprite,
 					  420, this.direction*this.h,	//source from sheet
 					  this.w, this.h,				//H&W from the sheet
-					  this.x, this.y,				//X&Y onto the canvas
+					  x, y,				//X&Y onto the canvas
 					  this.w, this.h);				//H&W onto the canvas
 	} else {
 	//otherwise draw it standing still
 		ctx.drawImage(this.sprite,
 					  0, this.direction*this.h,		//source from sheet
 					  this.w, this.h,				//H&W from the sheet
-					  this.x, this.y,				//X&Y onto the canvas
+					  x, y,				//X&Y onto the canvas
 					  this.w, this.h);				//H&W onto the canvas
 					  
 		/*		

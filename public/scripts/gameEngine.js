@@ -18,6 +18,10 @@ function GameEngine() {
 	this.inventory;
 	this.username = 'temp';
 	this.hotkeys = [];
+	this.screenOffsetX = 0;
+	this.screenOffsetY = 0;
+	this.FPS = 0;
+	this.totalTime = 0;
 }
 
 GameEngine.prototype.init = function(ctx) {
@@ -26,6 +30,9 @@ GameEngine.prototype.init = function(ctx) {
     this.surfaceWidth = this.ctx.canvas.width;
     this.surfaceHeight = this.ctx.canvas.height;
     this.startInput();
+	for(var i = 0; i < 4; i++) {
+		this.hotkeys[i] = 0;
+	}
 }
 
 GameEngine.prototype.start = function() {
@@ -51,7 +58,21 @@ GameEngine.prototype.startInput = function() {
         e.stopPropagation();
         e.preventDefault();
     }, false);
-    
+/*
+    this.ctx.canvas.addEventListener("rightClick", function(e) {
+        that.click = getXandY(e);
+        e.stopPropagation();
+        e.preventDefault();
+    }, false);
+
+	$("#mainCanvas").rightClick( function(e) {
+		var canvas = document.getElementById('mainCanvas');
+		var x = e.pageX - canvas.offsetLeft - 32;
+		var y = e.pageY - canvas.offsetTop - 32;
+		console.log(x + ", " + y);
+		character.setWaypoint(x, y);
+    });
+*/	
     this.ctx.canvas.addEventListener("mousemove", function(e) {
         that.mouse = getXandY(e);
     }, false);
@@ -96,7 +117,19 @@ GameEngine.prototype.startInput = function() {
     }, false);
 }
 
+GameEngine.prototype.clickTest = function(x, y) {
+	this.click = {x: x, y: y};
+}
+
+GameEngine.prototype.setHotkey = function(index, value) {
+	this.hotkeys[index] = value;
+}
+
 GameEngine.prototype.addEntity = function(entity) {
+	if(entity.username == this.username) {
+		this.screenOffsetX = this.ctx.canvas.width/2 - entity.x - 60;
+		this.screenOffsetY = this.ctx.canvas.height/2 - entity.y - 60;
+	}
     this.entities.push(entity);
 }
 
@@ -143,6 +176,8 @@ GameEngine.prototype.removeGUI = function(element) {
 GameEngine.prototype.draw = function(callback) {
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.save();
+
+    this.ctx.translate(Math.round(this.screenOffsetX), Math.round(this.screenOffsetY));
 	
 	for(var z = 0; z < 3; z++) {
 	//Go through the lists 3 times and only draw them if they have the z index
@@ -151,6 +186,10 @@ GameEngine.prototype.draw = function(callback) {
 				this.entities[i].draw(this.ctx);
 			}
 		}
+	}
+    this.ctx.restore();
+	
+	for(var z = 0; z < 3; z++) {
 		for (var i = 0; i < this.GUI.length; i++) {
 			if(this.GUI[i].z == z) {
 				this.GUI[i].draw(this.ctx);
@@ -160,31 +199,40 @@ GameEngine.prototype.draw = function(callback) {
     if (callback) {
         callback(this);
     }
-    this.ctx.restore();
 }
 
 GameEngine.prototype.update = function() {
+	this.FPS++;
     var entitiesCount = this.entities.length;
     //var selectedEntities = [];
     var selectedEntity;
 	var hoverEntity = null;
 	var guiClick = false;
 	var dt = this.clockTick*1000;
+	var screenX = Math.round(this.screenOffsetX);
+	var screenY = Math.round(this.screenOffsetY);
+	
+	this.totalTime += dt;
+	if(this.totalTime > 1000) {
+		console.log("FPS: " + this.FPS);
+		this.FPS = 0;
+		this.totalTime = 0;
+	}
 	
 	//if a key has been released
 	for(var i = 0; i < this.keyPress.length; i++) {
 		switch(this.keyPress[i]) {
-			case 188:
+			case this.hotkeys[0]:
 				NETWORK_MANAGER.stop(1);
 				break;
-			case 65:
-				NETWORK_MANAGER.stop(4);
-				break;
-			case 69:
+			case this.hotkeys[1]:
 				NETWORK_MANAGER.stop(2);
 				break;
-			case 79:
+			case this.hotkeys[2]:
 				NETWORK_MANAGER.stop(3);
+				break;
+			case this.hotkeys[3]:
+				NETWORK_MANAGER.stop(4);
 				break;
 			case 77:
 				NETWORK_MANAGER.createEnemy();
@@ -196,17 +244,17 @@ GameEngine.prototype.update = function() {
 	for(var i = 0; i < this.key.length; i++) {
 	//for each key in the list
 		switch(this.key[i]) {
-			case 188:
+			case this.hotkeys[0]:
 				NETWORK_MANAGER.move(1);
 				break;
-			case 65:
-				NETWORK_MANAGER.move(4);
-				break;
-			case 69:
+			case this.hotkeys[1]:
 				NETWORK_MANAGER.move(2);
 				break;
-			case 79:
+			case this.hotkeys[2]:
 				NETWORK_MANAGER.move(3);
+				break;
+			case this.hotkeys[3]:
+				NETWORK_MANAGER.move(4);
 				break;
 		}
 	}
@@ -219,7 +267,8 @@ GameEngine.prototype.update = function() {
         if(!entity.removeFromWorld) {
             entity.update(dt);
         }
-		if(this.mouse && entity.username && entity.isInsideEntity(this.mouse.x, this.mouse.y)) {
+		if(this.mouse && entity.username && entity.isInsideEntity(this.mouse.x-screenX, this.mouse.y-screenY)) {
+		//if(this.mouse && entity.username && entity.isInsideEntity(this.mouse.x, this.mouse.y)) {
 			hoverEntity = entity;
 		}
     }
@@ -277,7 +326,8 @@ GameEngine.prototype.update = function() {
 	if(this.click) {
 		//if the mouse is not clicked on a gui
 		if(!guiClick) {
-			this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
+			this.addEntity(new Explosion(this, this.mouse.x-screenX, this.mouse.y-screenY));
+			//this.addEntity(new Explosion(this, this.mouse.x, this.mouse.y));
 			if(hoverEntity && hoverEntity.username != this.username) {
 			//if an entity is clicked and its not our player then attack
 				NETWORK_MANAGER.attack();
@@ -313,6 +363,7 @@ GameEngine.prototype.useState = function(dt) {
 		return;
 	}
 	for(var i = 0; i < this.newState.array.length; i++) {
+	//for each player in the state
 		var update = this.newState.array[i];
 		var entity = this.getEntityByName(update.username);
 		if(!entity) {
@@ -321,14 +372,21 @@ GameEngine.prototype.useState = function(dt) {
 		}
 		var xToMove = 0, yToMove = 0;
 		if(update.x) {
+		//if there is an X amount to move, then split it up by how much time has passed
 			xToMove = (dt/50.0) * update.x;
 		}
 		if(update.y) {
 			yToMove = (dt/50.0) * update.y;
 		}
+		if(update.username == this.username) {
+			this.screenOffsetX -= xToMove;
+			this.screenOffsetY -= yToMove;
+		}
 		
+		//default direction
 		var dir = -1;
 		if(Math.abs(xToMove) > Math.abs(yToMove))
+		//find the direction they are facing
 			if(xToMove < 0)
 				dir = 3;
 			else
@@ -340,6 +398,7 @@ GameEngine.prototype.useState = function(dt) {
 				dir = 1;
 
 		if(Math.abs(xToMove) > 0.01 || Math.abs(yToMove) > 0.01) {
+		//if the number is bigger than .01 then set the players direction
 			entity.setDirection(dir);
 			entity.moving = true;
 		}
@@ -347,6 +406,7 @@ GameEngine.prototype.useState = function(dt) {
 			entity.moving = false;
 			
 		if(update.health) {
+		//if their health needs to be updated
 			entity.health += update.health;
 			console.log("health update(" + update.health + ") : " + entity.health + " / " + entity.maxHealth);
 			update.health = 0;
@@ -356,6 +416,7 @@ GameEngine.prototype.useState = function(dt) {
 			entity.attack = true;
 		}
 			
+		//reset timeSinceUpdate, and if its over 2 seconds then delete the player
 		entity.timeSinceUpdate = 0;
 		entity.setXandY(entity.x + xToMove, entity.y + yToMove);
 	}

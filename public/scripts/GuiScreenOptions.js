@@ -7,20 +7,47 @@ function GuiScreenOptions(game, x, y, sprite) {
 	this.divs = [];
 
 	for(var i = 0; i < 4; i++) {
-		var newDiv = 
+		var labelText = '';
+		if(i == 0) {
+			labelText = "Up";
+		} else if(i == 1) {
+			labelText = "Right";
+		} else if(i == 2) {
+			labelText = "Down";
+		} else if(i == 3) {
+			labelText = "Left";
+		}
+		var newInputDiv = 
 			"<div class='texts' id='text"+i+"' style='position:absolute; z-index:30;'>" +
-			"<input type='text' id='input"+i+"' style='width:20px;'>" +
+			"<input type='text' id='input"+i+"' style='width:20px; height:20px;'>" +
 			"</div>";
-		$("#canvasContainer").append(newDiv);
+		$("#canvasContainer").append(newInputDiv);
+		var newLabelDiv = 
+			"<div class='texts' id='label"+i+"' style='position:absolute; z-index:30;'>" +
+			"<p>"+labelText+"</p>" +
+			"</div>";
+		$("#canvasContainer").append(newLabelDiv);
 
 		var canvas = document.getElementById('surface');
+		var label = document.getElementById('label'+i);
 		var div = document.getElementById('text'+i);
 		var text = document.getElementById('input'+i);
-		this.divs.push(div);
-		this.texts.push(text);
+		var that = this;
+		text.addEventListener("keydown", function(e) {
+		//when a key is pressed then clear the box
+			this.value = '';
+		}, false);
+		text.addEventListener("keyup", function(e) {
+		//and when its let up then register it and save it to the hotkeys
+			that.getKey(this.id, e.keyCode);
+		}, false);
 		div.style.left = (this.x+canvas.offsetLeft+100)+"px";
 		div.style.top =  (this.y+canvas.offsetTop+ 100+i*40)+"px";
-		div.style.height = "20px";	
+		label.style.left = (this.x+canvas.offsetLeft+50)+"px";
+		label.style.top =  (this.y+canvas.offsetTop+ 100+i*40)+"px";
+		this.divs.push(div);
+		this.divs.push(label);
+		this.texts.push(text);
 	}
 }
 
@@ -36,12 +63,14 @@ GuiScreenOptions.prototype.remove = function() {
 		this.game.removeGUI(this.buttons[i]);
 	}
 	for(var i = 0; i < this.divs.length; i++) {
-		var text = this.texts[i].value;
-		console.log("text: " + text);
 		document.getElementById('canvasContainer').removeChild(this.divs[i]);
 	}
 }
 
+GuiScreenOptions.prototype.getKey = function(id, key) {
+	console.log("got " + key + " from " + id.substring(5));
+	game.setHotkey(id.substring(5), key);
+}
 
 GuiScreenOptions.prototype.update = function () {
 	for(var i = 0; i < this.buttons.length; i++) {

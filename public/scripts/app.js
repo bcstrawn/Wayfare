@@ -32,8 +32,17 @@ ASSET_MANAGER.queueDownload('img/morningstar.png');
 ASSET_MANAGER.queueDownload('img/options.png');
 ASSET_MANAGER.queueDownload('img/buttonClose.png');
 ASSET_MANAGER.queueDownload('img/buttonCloseHover.png');
+ASSET_MANAGER.queueDownload('img/Fire.png');
+ASSET_MANAGER.queueDownload('img/shine.png');
 
 
+$(document).ready( function() {
+	$("#surface").rightClick( function(e) {
+		var x = e.pageX - canvas.offsetLeft;
+		var y = e.pageY - canvas.offsetTop;
+		game.clickTest(x, y);
+    });
+});
 
 ASSET_MANAGER.downloadAll(function() {
     game.init(ctx);
