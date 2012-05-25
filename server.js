@@ -299,6 +299,7 @@ Entity.prototype.update = function(dt) {
 //************************************************ PLAYER ***********************************************************
 function Player(username, speed, hp, x, y) {
     Entity.call(this, username, speed, hp, x, y);
+    var attackerList = {};
 }
 
 Player.prototype = new Entity();
@@ -308,9 +309,24 @@ Player.prototype.update = function(dt) {
 	Entity.prototype.update.call(this, dt);
 }
 
+Player.prototype.addAttacker = function(attacker) {
+	this.attackerList[attacker.username] = true;
+}
+
+Player.prototype.removeAttacker = function(attacker) {
+	delete this.attackerList[attacker.username];
+}
+
+Player.prototype.clearAttackers = function() {
+	this.attackerList = {};
+}
+
 //************************************************ ENEMY *************************************************************
 function Enemy(username, speed, hp, x, y) {
     Entity.call(this, username, speed, hp, x, y);
+	var aggroList = {};
+	var target = null;
+	var targetAggro = null;
 }
 
 Enemy.prototype = new Entity();
@@ -318,4 +334,67 @@ Enemy.prototype.constructor = Enemy;
 
 Enemy.prototype.update = function(dt) {
 	Entity.prototype.update.call(this, dt);
+	
+	for (var i = 0; i < playerList.length; i++) {
+		var player = playerList[i];
+		
+		// Check if the player in question is close enough to draw aggro
+		if (Math.abs(player.x - this.x) < 20) {
+			if (Math.abs(player.y - this.y) < 20) {
+				// Check if the player in question is already in the aggro list
+				if (!this.aggroList.hasOwnProperty(player.username)) {
+					this.aggroList[player.username] = 30;
+				}
+			}
+		}
+	}
+	for (player in this.aggroList) {
+		var distance = Math.sqrt(Math.pow(player.x - this.x, 2) + Math.pow(player.y - this.y, 2))
+		var aggro = this.aggroList[player.username] / distance;
+		if (aggro < 1) {
+			this.removeAggroFor(player);
+		}
+		if (!this.hasTarget() || aggro > this.targetAggro) {
+			this.target = player;
+			this.targetAggro = aggro;
+		}
+	}
+	
+	this.attemptAttackOn(target);
+}
+
+Enemy.prototype.attemptAttackOn = function(target) {
+	if (target.isInRange(this)) {
+		this.attack = true;
+	} else {
+		this.moveTowards(target);
+	}
+}
+
+Enemy.prototype.removeAggroFor = function(target) {
+	if (this.target == target) {
+		this.target = null;
+	}
+	delete this.aggroList[target.username];
+}
+
+Enemy.prototype.hasTarget = function() {
+	if (this.target == null) {
+		return false;
+	} else {
+		return true;
+	}
+}
+
+Enemy.prototype.moveTowards = function(target) {
+	if (this.x > target.x) {
+		this.move[4] = true;
+	} else {
+		this.move[2] = true;
+	}
+	if (this.y > target.y) {
+		this.move[1] = true;
+	} else {
+		this.move[3] = true;
+	}
 }
